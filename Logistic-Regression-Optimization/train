@@ -1,0 +1,75 @@
+import numpy as np
+import pandas as pd
+import kagglehub
+import os
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix
+from logisticRegressionModel import LogisticRegression
+
+# Download and Load the Loan Approval Dataset
+path = kagglehub.dataset_download("taweilo/loan-approval-classification-data")
+
+# Find the CSV file within the downloaded path
+csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
+full_path = os.path.join(path, csv_files[0])
+df = pd.read_csv(full_path)
+df.info()
+
+# Clean column names (remove leading/trailing spaces if any)
+df.columns = df.columns.str.strip()
+
+
+print("\nPreprocessing data...")
+# 2. Preprocessing
+
+# Encode Categorical Features
+categorical_cols = df.select_dtypes(include='object').columns
+print(f"\nApplying One-Hot Encoding to: {list(categorical_cols)}")
+df_processed = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+print("Data Info after One-Hot Encoding:")
+df_processed.info()
+
+# --- Prepare Data for Model ---
+print("\nSplitting data...")
+# 3. Separate Features (X) and Target (y)
+target_col = 'loan_status' 
+
+X = df_processed.drop(target_col, axis=1)
+y = df_processed[target_col]
+
+# Convert to NumPy arrays
+X = X.to_numpy()
+y = y.to_numpy()
+
+# 4. Split into Training and Testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+
+# Scale, Train, and Predict 
+print("\nScaling features...")
+# Scale Numerical Features (apply after splitting)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+print("Features scaled.")
+
+print("\nInitializing and training model...")
+# Initialize and Train the Logistic Regression model
+clf=LogisticRegression() 
+clf.fit(X_train,y_train)
+
+print("\nMaking predictions...")
+# 7. Make Predictions on the test set
+class_predictions, probabilities = clf.predict(X_test)
+
+# Evaluate 
+print("\nEvaluating model...")
+# Evaluate the predictions
+accuracy = accuracy_score(y_test, class_predictions)
+print(f"\nModel Accuracy: {accuracy:.4f}")
+print("\nConfusion Matrix:\n", confusion_matrix(y_test, class_predictions))
+
+
